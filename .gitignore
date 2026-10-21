@@ -1,0 +1,8 @@
+# Fichiers compiles
+dist/
+*.exe
+*.pdb
+
+# Copies de sauvegarde
+*.bak
+*.tmp
