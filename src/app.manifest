@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
-  <assemblyIdentity version="1.0.0.0" processorArchitecture="x86" name="ZeusTools.DataLimits" type="win32" />
-  <description>Zeus Data Limits (Zeus : Le Maitre de l Olympe)</description>
+  <assemblyIdentity version="1.0.0.0" processorArchitecture="x86" name="ZeusTools.LimitPatcher" type="win32" />
+  <description>Zeus Limit Patcher (Zeus : Le Maitre de l Olympe)</description>
   <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">
     <security>
       <requestedPrivileges>
