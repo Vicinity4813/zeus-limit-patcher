@@ -82,6 +82,13 @@ static class Ops
 
     public enum ExeState { Missing, Unknown, Normal, Patched }
 
+    // Exe deja modifie par zeus-qol : il a une section .wpat (suivie ou non de .zlim).
+    static bool IsQol(byte[] f)
+    {
+        foreach (Sec s in Code.Load(f).Secs) if (s.Name == Limits.WpatName) return true;
+        return false;
+    }
+
     public static ExeState ExeInfo(string path, out string text)
     {
         text = "";
@@ -95,10 +102,12 @@ static class Ops
             {
                 text = g[0] && g[1] ? L.T("Limites déjà doublées (walkers, chemins, bâtiments)", "Limits already doubled (walkers, paths, buildings)")
                                     : L.T("Limites déjà en partie doublées (essai)", "Limits partly doubled (test build)");
+                if (IsQol(f)) text += L.T(" — exe zeus-qol", " — zeus-qol exe");
                 return ExeState.Patched;
             }
             Limits.Patch(f, true, true, new StringBuilder());   // en memoire : l'exe est-il patchable ?
-            text = L.T("Exe anglais 2.1.4.0 — limites normales", "English exe 2.1.4.0 — normal limits");
+            text = IsQol(f) ? L.T("Exe zeus-qol (anglais 2.1.4.0) — limites normales", "zeus-qol exe (English 2.1.4.0) — normal limits")
+                            : L.T("Exe anglais 2.1.4.0 — limites normales", "English exe 2.1.4.0 — normal limits");
             return ExeState.Normal;
         }
         catch (Exception ex)

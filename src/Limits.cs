@@ -38,6 +38,12 @@ public struct Konst { public uint Va; public uint Old, New; public Konst(uint va
 public static class Limits
 {
     public const string SectionName = ".zlim";
+    // Exe zeus-qol : sa section .wpat (la derniere) prend la seule place d'en-tete libre. Elle est alors agrandie
+    // d'autant : memes adresses que .zlim (juste apres elle), page de code ecrite en fin de fichier apres des zeros
+    // (la partie non initialisee de .wpat devient des zeros dans le fichier, meme contenu au demarrage).
+    // La page se termine par WpatMagic et les valeurs d'origine de .wpat (taille virtuelle, brute, attributs).
+    public const string WpatName = ".wpat";
+    const string WpatMagic = "ZeusLimits.wpat";
     public static bool NoStack;   // essais seulement : ne pas agrandir les tableaux sur la pile
 
     // ---- description du patch (exe anglais 2.1.4.0)
@@ -253,6 +259,7 @@ public static class Limits
         byte[] f = (byte[])orig.Clone();
         Code c = Code.Load(f);
         foreach (Sec s in c.Secs) if (s.Name == SectionName) throw new Exception("cet exe est deja patche (section " + SectionName + ")");
+        if (PatchedWpat(c) != null) throw new Exception("cet exe est deja patche (section " + WpatName + " agrandie)");
         CheckSignature(c);
 
         var arrs = Arrays(walkers, buildings);
@@ -261,7 +268,15 @@ public static class Limits
         Sec last = c.Secs[c.Secs.Count - 1];
         uint newVa = Align(last.Va + Math.Max(last.VSize, last.RSize), secAlign);
         if (BitConverter.ToUInt32(f, pe + 24 + 56) != newVa - c.ImageBase) throw new Exception("SizeOfImage inattendu : l'annulation ne serait pas exacte");
-        Layout(arrs, newVa);                        // 4 octets de marge : la file (1 dword par case) finit sur 16 octets
+        // en-tete de section : place libre, sinon (exe zeus-qol) agrandissement de .wpat
+        int hdr = pe + 24 + c.OptSize + c.NumSec * 40;
+        uint sizeOfHeaders = BitConverter.ToUInt32(f, pe + 24 + 60);
+        bool free = hdr + 40 <= sizeOfHeaders;
+        for (int i = 0; free && i < 40; i++) if (f[hdr + i] != 0) free = false;
+        bool wpat = !free && last.Name == WpatName;
+        if (!free && !wpat)
+            throw new Exception(hdr + 40 > sizeOfHeaders ? "pas de place pour un en-tete de section" : "la place de l'en-tete de section n'est pas libre");
+        Layout(arrs, newVa, wpat || HasCode(arrs));   // 4 octets de marge : la file (1 dword par case) finit sur 16 octets
         uint vsize = SectionSize(arrs, newVa);
         // l'annulation reconnait les valeurs par leur place dans la section : aucune valeur d'origine ne doit y tomber
         foreach (Insn n in c.Insns.Values)
@@ -269,23 +284,33 @@ public static class Limits
                 if (fl.Size == 4 && fl.Value >= newVa && fl.Value < newVa + vsize + 0x10000)
                     throw new Exception(string.Format("valeur 0x{0:X} deja dans la future section (0x{1:X}) : annulation non garantie", fl.Value, n.Va));
 
-        // en-tete de section
-        int hdr = pe + 24 + c.OptSize + c.NumSec * 40;
-        uint sizeOfHeaders = BitConverter.ToUInt32(f, pe + 24 + 60);
-        if (hdr + 40 > sizeOfHeaders) throw new Exception("pas de place pour un en-tete de section");
-        for (int i = 0; i < 40; i++) if (f[hdr + i] != 0) throw new Exception("la place de l'en-tete de section n'est pas libre");
-        byte[] name = Encoding.ASCII.GetBytes(SectionName);
-        Array.Copy(name, 0, f, hdr, name.Length);
-        Put(f, hdr + 8, vsize); Put(f, hdr + 12, newVa - c.ImageBase); Put(f, hdr + 16, 0); Put(f, hdr + 20, 0);
-        Put(f, hdr + 36, 0xC0000080);              // donnees non initialisees, lecture/ecriture
-        if (HasCode(arrs))
+        uint gap = 0; uint[] wt = null;
+        if (wpat)
         {
-            // premiere page initialisee : la routine d'attribution (ajoutee en fin de fichier)
-            if (f.Length % fileAlign != 0 || CodePage % fileAlign != 0) throw new Exception("taille de fichier non alignee : l'annulation ne serait pas exacte");
-            Put(f, hdr + 16, CodePage); Put(f, hdr + 20, (uint)f.Length);
-            Put(f, hdr + 36, 0xE0000060);          // code + donnees, execution, lecture/ecriture
+            // .wpat agrandie jusqu'a la fin de nos tableaux ; sa partie brute couvre maintenant notre page de code
+            if (f.Length != last.Raw + last.RSize || last.RSize % fileAlign != 0 || (newVa - last.Va) % fileAlign != 0 || CodePage % fileAlign != 0)
+                throw new Exception("section " + WpatName + " inattendue : l'annulation ne serait pas exacte");
+            uint ch = BitConverter.ToUInt32(f, last.Header + 36);
+            wt = new uint[] { last.VSize, last.RSize, ch };
+            gap = newVa - last.Va - last.RSize;
+            Put(f, last.Header + 8, newVa - last.Va + vsize); Put(f, last.Header + 16, newVa - last.Va + CodePage);
+            Put(f, last.Header + 36, ch | 0xE0000060);   // code + donnees, execution, lecture/ecriture
         }
-        f[pe + 6] = (byte)(c.NumSec + 1); f[pe + 7] = (byte)((c.NumSec + 1) >> 8);
+        else
+        {
+            byte[] name = Encoding.ASCII.GetBytes(SectionName);
+            Array.Copy(name, 0, f, hdr, name.Length);
+            Put(f, hdr + 8, vsize); Put(f, hdr + 12, newVa - c.ImageBase); Put(f, hdr + 16, 0); Put(f, hdr + 20, 0);
+            Put(f, hdr + 36, 0xC0000080);              // donnees non initialisees, lecture/ecriture
+            if (HasCode(arrs))
+            {
+                // premiere page initialisee : la routine d'attribution (ajoutee en fin de fichier)
+                if (f.Length % fileAlign != 0 || CodePage % fileAlign != 0) throw new Exception("taille de fichier non alignee : l'annulation ne serait pas exacte");
+                Put(f, hdr + 16, CodePage); Put(f, hdr + 20, (uint)f.Length);
+                Put(f, hdr + 36, 0xE0000060);          // code + donnees, execution, lecture/ecriture
+            }
+            f[pe + 6] = (byte)(c.NumSec + 1); f[pe + 7] = (byte)((c.NumSec + 1) >> 8);
+        }
         Put(f, pe + 24 + 56, Align(newVa + vsize - c.ImageBase, secAlign));   // SizeOfImage
 
         // references du code
@@ -385,15 +410,17 @@ public static class Limits
             }
         }
         foreach (Moved m in arrs) log.AppendFormat("{0} : 0x{1:X} x{2} -> 0x{3:X} x{4}\n", m.Name, m.Base, m.Old, m.NewBase, m.New);
-        if (HasCode(arrs)) f = AddLowestFree(f, c, newVa, arrs[0].NewBase, (uint)arrs[0].New, log);
+        if (HasCode(arrs) || wpat) f = AddPage(f, c, newVa, arrs, gap, wt, log);
+        if (wpat) log.AppendFormat("{0} agrandie : 0x{1:X} -> 0x{2:X} (fichier +{3} octets)\n", WpatName, wt[0], newVa - last.Va + vsize, gap + CodePage);
         return f;
     }
 
     // Disposition de la section : identique au patch, recalculee a partir de son adresse.
     // Chaque groupe commence 16 octets apres une limite de 4 Ko (place pour les acces "debut - element").
-    static void Layout(List<Moved> arrs, uint newVa)
+    static void Layout(List<Moved> arrs, uint newVa) { Layout(arrs, newVa, HasCode(arrs)); }
+    static void Layout(List<Moved> arrs, uint newVa, bool page)
     {
-        uint p = newVa + (HasCode(arrs) ? CodePage : 0); int g = -1;   // page de code en tete (walkers)
+        uint p = newVa + (page ? CodePage : 0); int g = -1;   // page de code en tete (walkers, ou .wpat agrandie)
         foreach (Moved m in arrs)
         {
             if (m.Group != g) { p = Align(p, 4096) + 16; g = m.Group; }   // 4 Ko entre groupes : les fins de boucle (fin + champ) ne tombent pas dans le groupe suivant
@@ -408,31 +435,48 @@ public static class Limits
     }
 
     // Quels groupes sont dans la section : d'apres sa taille.
-    public static bool[] Detect(byte[] f, out uint newVa, out int hdr)
+    public static bool[] Detect(byte[] f, out uint newVa, out int hdr) { bool wpat; return Detect(f, out newVa, out hdr, out wpat); }
+
+    // wpat : patch fait en agrandissant .wpat (exe zeus-qol) ; hdr est alors l'en-tete de .wpat.
+    public static bool[] Detect(byte[] f, out uint newVa, out int hdr, out bool wpat)
     {
         Code c = Code.Load(f);
-        newVa = 0; hdr = -1;
-        foreach (Sec s in c.Secs) if (s.Name == SectionName) { newVa = s.Va; hdr = s.Header; }
-        if (hdr < 0) return null;
-        uint vsize = BitConverter.ToUInt32(f, hdr + 8);
+        newVa = 0; hdr = -1; wpat = false; uint vsize = 0;
+        foreach (Sec s in c.Secs) if (s.Name == SectionName) { newVa = s.Va; hdr = s.Header; vsize = s.VSize; }
+        if (hdr < 0)
+        {
+            Sec w = PatchedWpat(c); if (w == null) return null;
+            wpat = true; newVa = w.Va + w.RSize - CodePage; hdr = w.Header; vsize = w.VSize - (newVa - w.Va);
+        }
         for (int w = 0; w < 2; w++) for (int b = 0; b < 2; b++)
         {
             var arrs = Arrays(w == 1, b == 1); if (arrs.Count == 0) continue;
-            Layout(arrs, newVa);
+            Layout(arrs, newVa, wpat || HasCode(arrs));
             if (SectionSize(arrs, newVa) == vsize) return new bool[] { w == 1, b == 1 };
         }
-        throw new Exception("section " + SectionName + " de taille inattendue");
+        throw new Exception("section " + (wpat ? WpatName : SectionName) + " de taille inattendue");
+    }
+
+    // Exe zeus-qol patche : .wpat en derniere section, terminee par notre page (signature en fin de page).
+    static Sec PatchedWpat(Code c)
+    {
+        Sec w = c.Secs[c.Secs.Count - 1];
+        if (w.Name != WpatName || w.RSize < CodePage || w.Raw + w.RSize > c.F.Length) return null;
+        byte[] m = Encoding.ASCII.GetBytes(WpatMagic);
+        int o = (int)(w.Raw + w.RSize - 32);
+        for (int i = 0; i < 16; i++) if (c.F[o + i] != (i < m.Length ? m[i] : 0)) return null;
+        return w;
     }
 
     public static byte[] Unpatch(byte[] patched, StringBuilder log)
     {
         byte[] f = (byte[])patched.Clone();
-        f = RemoveLowestFree(f, log);
-        uint newVa; int hdr;
-        bool[] g = Detect(f, out newVa, out hdr);
+        uint newVa; int hdr; bool wpat;
+        bool[] g = Detect(f, out newVa, out hdr, out wpat);
         if (g == null) throw new Exception("cet exe n'est pas patche");
+        f = RemovePage(f, g, newVa, hdr, wpat, log);
         Code c = Code.Load(f);
-        var arrs = Arrays(g[0], g[1]); Layout(arrs, newVa);
+        var arrs = Arrays(g[0], g[1]); Layout(arrs, newVa, wpat || HasCode(arrs));
         foreach (var kv in StackArrays(g[0], g[1])) PatchStack(f, c, kv.Key, kv.Value, true, log);
         foreach (uint va in ShlSites(g[0], g[1])) PatchShl(f, c, va, 6, 5);
         int restored = 0;
@@ -472,11 +516,15 @@ public static class Limits
             uint unit = BitConverter.ToUInt32(f, e + 8) == 1 && m.Size > 1 ? (uint)m.Size : 1;
             Put(f, e + 4, m.Base); Put(f, e + 12, (uint)m.Old * unit);
         }
-        // retrait de la section
+        // retrait de la section (.wpat : deja remise a sa taille d'origine par RemovePage)
         int pe = c.Pe; uint secAlign = BitConverter.ToUInt32(f, pe + 24 + 32);
-        for (int i = 0; i < 40; i++) f[hdr + i] = 0;
-        f[pe + 6] = (byte)(c.NumSec - 1); f[pe + 7] = (byte)((c.NumSec - 1) >> 8);
-        Sec last = c.Secs[c.Secs.Count - 2];
+        Sec last = c.Secs[c.Secs.Count - 1];
+        if (!wpat)
+        {
+            for (int i = 0; i < 40; i++) f[hdr + i] = 0;
+            f[pe + 6] = (byte)(c.NumSec - 1); f[pe + 7] = (byte)((c.NumSec - 1) >> 8);
+            last = c.Secs[c.Secs.Count - 2];
+        }
         Put(f, pe + 24 + 56, Align(last.Va + Math.Max(last.VSize, last.RSize) - c.ImageBase, secAlign));
         log.AppendFormat("references remises : {0}\n", restored);
         return f;
@@ -558,46 +606,83 @@ public static class Limits
     // Place de la routine : premiere page de .zlim, seule partie initialisee de la section (donnees ajoutees en
     // fin de fichier). Pas de place sure ailleurs : la fin de .text sert deja au French Patch, au Resolution
     // Customiser et au code des exe widescreen, et l'en-tete de l'exe n'a pas de place pour une autre section.
+    // Exe zeus-qol : la page est au meme endroit (juste apres l'ancienne fin de .wpat), au bout de .wpat agrandie.
     const uint CodePage = 0x1000;
     static bool HasCode(List<Moved> arrs) { return arrs.Count > 0 && arrs[0].Base == 0xDBB84C; }   // patch des walkers
 
-    // Ecrit le detour et renvoie le fichier complete par la page de code (placee en z = debut de .zlim).
-    static byte[] AddLowestFree(byte[] f, Code c, uint z, uint q, uint cap, StringBuilder log)
+    // Contenu de la page placee en z : la routine (patch des walkers), puis pour .wpat la signature et les
+    // valeurs d'origine de la section (wt : taille virtuelle, taille brute, attributs) dans les 32 derniers octets.
+    static byte[] Page(uint z, List<Moved> arrs, uint[] wt)
     {
-        byte[] code = LowestFree(z, QHead, QCount, q, cap, AllocBack);
-        int o = c.ToOff(AllocVa);
-        byte[] orig = AllocOrig(q, cap);
-        for (int i = 0; i < orig.Length; i++)
-            if (f[o + i] != orig[i]) throw new Exception(string.Format("octets inattendus en 0x{0:X} (attribution des numeros de walkers)", AllocVa + i));
-        byte[] det = AllocDetour(z);
-        Array.Copy(det, 0, f, o, det.Length);
-        byte[] g = new byte[f.Length + CodePage];
+        byte[] p = new byte[CodePage];
+        if (HasCode(arrs))
+        {
+            byte[] code = LowestFree(z, QHead, QCount, arrs[0].NewBase, (uint)arrs[0].New, AllocBack);
+            Array.Copy(code, p, code.Length);
+        }
+        if (wt != null)
+        {
+            byte[] m = Encoding.ASCII.GetBytes(WpatMagic);
+            Array.Copy(m, 0, p, CodePage - 32, m.Length);
+            for (int i = 0; i < 3; i++) Put(p, (int)CodePage - 16 + i * 4, wt[i]);
+        }
+        return p;
+    }
+
+    // Ecrit le detour (walkers) et renvoie le fichier complete par gap zeros puis la page (placee en z).
+    static byte[] AddPage(byte[] f, Code c, uint z, List<Moved> arrs, uint gap, uint[] wt, StringBuilder log)
+    {
+        byte[] page = Page(z, arrs, wt);
+        if (HasCode(arrs))
+        {
+            int o = c.ToOff(AllocVa);
+            byte[] orig = AllocOrig(arrs[0].NewBase, (uint)arrs[0].New);
+            for (int i = 0; i < orig.Length; i++)
+                if (f[o + i] != orig[i]) throw new Exception(string.Format("octets inattendus en 0x{0:X} (attribution des numeros de walkers)", AllocVa + i));
+            byte[] det = AllocDetour(z);
+            Array.Copy(det, 0, f, o, det.Length);
+            log.AppendFormat("attribution du plus petit numero libre : detour 0x{0:X} -> 0x{1:X}\n", AllocVa, z);
+        }
+        byte[] g = new byte[f.Length + gap + CodePage];
         Array.Copy(f, g, f.Length);
-        Array.Copy(code, 0, g, f.Length, code.Length);
-        log.AppendFormat("attribution du plus petit numero libre : detour 0x{0:X} -> 0x{1:X} ({2} octets)\n", AllocVa, z, code.Length);
+        Array.Copy(page, 0, g, f.Length + gap, CodePage);
         return g;
     }
 
-    // Remet les 31 octets (forme patchee : le reste de l'annulation s'en charge) et retire la page de code.
-    static byte[] RemoveLowestFree(byte[] f, StringBuilder log)
+    // Remet les 31 octets (forme patchee : le reste de l'annulation s'en charge), retire la page et, pour .wpat,
+    // les zeros ajoutes avant elle ; la section retrouve ses valeurs d'origine (.wpat) ou redevient non initialisee.
+    static byte[] RemovePage(byte[] f, bool[] g, uint newVa, int hdr, bool wpat, StringBuilder log)
     {
-        uint newVa; int hdr; bool[] g = Detect(f, out newVa, out hdr);
-        if (g == null || !g[0]) return f;
+        if (!wpat && !g[0]) return f;
         Code c = Code.Load(f);
-        var arrs = Arrays(true, false); Layout(arrs, newVa);
+        var arrs = Arrays(g[0], g[1]); Layout(arrs, newVa, wpat || HasCode(arrs));
+        string sec = wpat ? WpatName : SectionName;
         uint raw = BitConverter.ToUInt32(f, hdr + 20), rsize = BitConverter.ToUInt32(f, hdr + 16);
-        if (rsize != CodePage || raw + rsize != f.Length) throw new Exception("page de code de " + SectionName + " inattendue");
-        byte[] code = LowestFree(newVa, QHead, QCount, arrs[0].NewBase, (uint)arrs[0].New, AllocBack);
-        for (int i = 0; i < CodePage; i++) if (f[raw + i] != (i < code.Length ? code[i] : 0)) throw new Exception("routine inattendue dans " + SectionName);
-        int o = c.ToOff(AllocVa);
-        byte[] det = AllocDetour(newVa);
-        for (int i = 0; i < det.Length; i++) if (f[o + i] != det[i]) throw new Exception(string.Format("detour inattendu en 0x{0:X}", AllocVa + i));
-        byte[] orig = AllocOrig(arrs[0].NewBase, (uint)arrs[0].New);
-        Array.Copy(orig, 0, f, o, orig.Length);
-        byte[] r = new byte[raw];
+        if (rsize < CodePage || (!wpat && rsize != CodePage) || raw + rsize != f.Length) throw new Exception("page de code de " + sec + " inattendue");
+        int po = (int)(raw + rsize - CodePage);
+        uint[] wt = null; uint keep = raw;
+        if (wpat)
+        {
+            wt = new uint[3]; for (int i = 0; i < 3; i++) wt[i] = BitConverter.ToUInt32(f, po + (int)CodePage - 16 + i * 4);
+            keep = raw + wt[1];
+            if (keep > po) throw new Exception("taille d'origine de " + WpatName + " inattendue");
+            for (int i = (int)keep; i < po; i++) if (f[i] != 0) throw new Exception("zeros attendus dans " + WpatName + " agrandie");
+        }
+        byte[] page = Page(newVa, arrs, wt);
+        for (int i = 0; i < CodePage; i++) if (f[po + i] != page[i]) throw new Exception("routine inattendue dans " + sec);
+        if (HasCode(arrs))
+        {
+            int o = c.ToOff(AllocVa);
+            byte[] det = AllocDetour(newVa);
+            for (int i = 0; i < det.Length; i++) if (f[o + i] != det[i]) throw new Exception(string.Format("detour inattendu en 0x{0:X}", AllocVa + i));
+            byte[] orig = AllocOrig(arrs[0].NewBase, (uint)arrs[0].New);
+            Array.Copy(orig, 0, f, o, orig.Length);
+            log.AppendFormat("attribution d'origine remise (0x{0:X})\n", AllocVa);
+        }
+        byte[] r = new byte[keep];
         Array.Copy(f, r, r.Length);
-        Put(r, hdr + 16, 0); Put(r, hdr + 20, 0); Put(r, hdr + 36, 0xC0000080);   // section de nouveau non initialisee
-        log.AppendFormat("attribution d'origine remise (0x{0:X})\n", AllocVa);
+        if (wpat) { Put(r, hdr + 8, wt[0]); Put(r, hdr + 16, wt[1]); Put(r, hdr + 36, wt[2]); log.AppendFormat("{0} remise a sa taille d'origine\n", WpatName); }
+        else { Put(r, hdr + 16, 0); Put(r, hdr + 20, 0); Put(r, hdr + 36, 0xC0000080); }   // section de nouveau non initialisee
         return r;
     }
 
