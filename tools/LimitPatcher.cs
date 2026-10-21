@@ -227,9 +227,9 @@ class MainForm : Form
         tExe = new TextBox { Location = new Point(16, 120), Width = 620, Anchor = lr };
         bExe = new Button { Location = new Point(644, 118), Size = new Size(100, 27), Anchor = AnchorStyles.Top | AnchorStyles.Right };
         lInfo = new Label { Location = new Point(16, 150), Size = new Size(728, 22), ForeColor = Brown, Font = new Font(Font, FontStyle.Bold), Anchor = lr };
-        lWarn = new Label { Location = new Point(16, 178), Size = new Size(728, 44), ForeColor = Color.FromArgb(170, 100, 0), Anchor = lr };
-        bPatch = new Button { Location = new Point(16, 228), Size = new Size(260, 36), Font = new Font(Font, FontStyle.Bold) };
-        log = new RichTextBox { Location = new Point(16, 276), Size = new Size(728, 178), ReadOnly = true, BackColor = Color.White, Font = new Font("Consolas", 9f),
+        lWarn = new Label { Location = new Point(16, 178), Size = new Size(728, 62), ForeColor = Color.FromArgb(170, 100, 0), Anchor = lr };   // 3 lignes : long chemin du dossier de l'original
+        bPatch = new Button { Location = new Point(16, 246), Size = new Size(260, 36), Font = new Font(Font, FontStyle.Bold) };
+        log = new RichTextBox { Location = new Point(16, 294), Size = new Size(728, 160), ReadOnly = true, BackColor = Color.White, Font = new Font("Consolas", 9f),
             Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right };
 
         bExe.Click += delegate

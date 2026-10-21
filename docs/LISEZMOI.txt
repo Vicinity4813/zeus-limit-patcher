@@ -1,0 +1,65 @@
+﻿ZEUS LIMIT PATCHER 1.0 - Le Maître de l'Olympe (Zeus / Poséidon)
+================================================================
+(English version: README.txt)
+
+À quoi ça sert
+--------------
+Les grandes cités butent sur des limites fixes du jeu : les walkers n'apparaissent
+plus, les ouvriers ne trouvent plus de chemin, on ne peut plus poser de bâtiment.
+Ce programme double ces limites dans votre Zeus.exe anglais 2.1.4.0 :
+  - walkers (personnages et animaux qui circulent) : 2000 -> 4000
+  - chemins (trajets calculés pour les walkers)    : 1000 -> 2000
+  - bâtiments                                      : 4000 -> 8000
+Rien d'autre ne change (graphismes, taille de la carte, règles du jeu).
+
+Utilisation
+-----------
+1. Fermez le jeu. Copiez vos sauvegardes (dossier Save) en lieu sûr.
+2. Lancez « Zeus Limit Patcher.exe » (rien à installer).
+3. Cliquez sur « Parcourir… » et choisissez le Zeus.exe du jeu. La fenêtre indique
+   ce qu'il est : limites normales, déjà doublées, ou exe non reconnu.
+4. Cliquez sur « Doubler les limites » et confirmez.
+
+L'exe d'origine est copié dans le dossier « Zeus.exe original », à côté du patcheur.
+Pour revenir en arrière : remettez cette copie à la place de Zeus.exe.
+La liste « Langue » en haut à droite passe le programme en anglais.
+
+Sauvegardes
+-----------
+- Les sauvegardes existantes s'ouvrent normalement avec l'exe patché.
+- Les sauvegardes faites avec l'exe patché NE PEUVENT PLUS être ouvertes par l'exe
+  d'origine (le jeu plante). Gardez une copie de vos sauvegardes avant de patcher si
+  vous pensez revenir en arrière.
+
+Exe pris en charge
+------------------
+- Zeus.exe anglais 2.1.4.0 (Zeus avec ou sans Poséidon) : GOG, Steam, exe widescreen.
+- Avec Zeus - EXE French Patch (https://github.com/Vicinity4813/zeus-exe-french-patch),
+  avant ou après ce patch (même résultat).
+- Avec zeus-qol 1.0.0 (https://github.com/andrehamon/zeus-qol) : installez d'abord
+  zeus-qol (son installateur n'accepte que l'exe GOG d'origine), puis ce patcheur.
+  Pour désinstaller zeus-qol plus tard, remettez d'abord l'exe de « Zeus.exe original ».
+- L'exe français du commerce n'est pas pris en charge (utilisez l'exe anglais avec
+  le French Patch).
+
+Bon à savoir
+------------
+- Avant d'écrire quoi que ce soit, le programme vérifie que l'annulation du patch
+  redonnerait l'exe d'origine octet pour octet ; sinon, rien n'est modifié.
+- Un nouveau walker reçoit toujours le plus petit numéro libre.
+- Deux autres tableaux de 2000 cases, au rôle inconnu, ne sont pas agrandis ; ils
+  n'ont jamais été pleins dans les cités mesurées.
+- Le programme ne se connecte jamais à Internet. Il n'écrit que le Zeus.exe choisi
+  et le dossier « Zeus.exe original ». Son code source est fourni dans « source ».
+- Ligne de commande :
+    "Zeus Limit Patcher.exe" [--lang fr|en] --info <Zeus.exe> | --patch <Zeus.exe>
+
+Crédits
+-------
+- Code : licence MIT (fichier LICENSE). Vicinity4813, 2026.
+- La lecture des sauvegardes (source\ZeusPak.cs, outil SavCli) est adaptée de
+  zeus_mapper de zawapl (Jakub Zawadzki), licence MIT (source\LICENSE-zeus_mapper.txt).
+- Merci à JackFuste pour les exe widescreen sur lesquels le patch a été mis au point.
+- Compatibilité testée avec zeus-qol d'andrehamon (version publiée) ; aucun code repris.
+- Le Maître de l'Olympe : Zeus / Poséidon sont des jeux d'Impressions Games / Sierra.
+  Projet de fan, sans lien avec eux ; aucun fichier du jeu n'est inclus.
