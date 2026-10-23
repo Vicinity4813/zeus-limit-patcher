@@ -1,15 +1,17 @@
-﻿ZEUS LIMIT PATCHER 1.0 - Le Maître de l'Olympe (Zeus / Poséidon)
+﻿ZEUS LIMIT PATCHER 1.1 -Le Maître de l'Olympe (Zeus / Poséidon)
 ================================================================
 (English version: README.txt)
 
 À quoi ça sert
 --------------
 Les grandes cités butent sur des limites fixes du jeu : les walkers n'apparaissent
-plus, les ouvriers ne trouvent plus de chemin, on ne peut plus poser de bâtiment.
-Ce programme double ces limites dans votre Zeus.exe anglais 2.1.4.0 :
+plus, les ouvriers ne trouvent plus de chemin, on ne peut plus poser de bâtiment,
+les grosses invasions restent petites. Ce programme double ces limites dans votre
+Zeus.exe anglais 2.1.4.0 :
   - walkers (personnages et animaux qui circulent) : 2000 -> 4000
   - chemins (trajets calculés pour les walkers)    : 1000 -> 2000
   - bâtiments                                      : 4000 -> 8000
+  - compagnies d'armée (soldats, envahisseurs)     :  100 ->  200
 Rien d'autre ne change (graphismes, taille de la carte, règles du jeu).
 
 Utilisation
@@ -30,6 +32,14 @@ Sauvegardes
 - Les sauvegardes faites avec l'exe patché NE PEUVENT PLUS être ouvertes par l'exe
   d'origine (le jeu plante). Gardez une copie de vos sauvegardes avant de patcher si
   vous pensez revenir en arrière.
+- Les sauvegardes faites avec un exe 1.1 ne s'ouvrent pas non plus avec un exe 1.0.
+  Celles faites avec un exe 1.0 s'ouvrent avec un exe 1.1.
+
+Passer de la 1.0 à la 1.1
+-------------------------
+La 1.0 ne doublait pas les compagnies d'armée. La fenêtre reconnaît un exe patché
+en 1.0 : remettez l'exe d'origine du dossier « Zeus.exe original » à la place de
+Zeus.exe, puis patchez-le à nouveau avec la 1.1.
 
 Exe pris en charge
 ------------------

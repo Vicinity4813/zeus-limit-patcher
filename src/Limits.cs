@@ -49,7 +49,7 @@ public static class Limits
     // ---- description du patch (exe anglais 2.1.4.0)
     // Les tableaux sont listes dans l'ordre de la nouvelle section ; deux tableaux contigus a l'origine le
     // restent (la file des walkers libres finit au debut des walkers).
-    static List<Moved> Arrays(bool walkers, bool buildings)
+    static List<Moved> Arrays(bool walkers, bool buildings, bool companies)
     {
         var l = new List<Moved>();
         if (walkers)
@@ -73,14 +73,25 @@ public static class Limits
             l.Add(new Moved { Group = 2, Name = "A3", Base = 0xB1AA34, Size = 4, Old = 4000, New = 8000, OneBased = true });
             l.Add(new Moved { Group = 3, Name = "liste de batiments (e73)", Base = 0x91F5B8, Size = 2, Old = 4000, New = 8000 });
         }
+        // compagnies (soldats et envahisseurs, bloc 31) : 100 a l'origine, la limite des grosses invasions.
+        // Groupe a part, en fin de section : la disposition des groupes 1 a 3 reste celle de la version 1.0.
+        if (companies)
+            l.Add(new Moved { Group = 4, Name = "compagnies (e31)", Base = 0xDB7B40, Size = 156, Old = 100, New = 200 });
         return l;
     }
 
     // Indices "ligne x 4000" des matrices calcules sans constante : lea x5, lea x5, lea x5 puis shl 5 (= x4000).
     // Les lignes passant a 8000 elements, le shl 5 devient shl 6.
-    static uint[] ShlSites(bool walkers, bool buildings)
+    static uint[] ShlSites(bool walkers, bool buildings, bool companies)
     {
         return buildings ? new uint[] { 0x40E52E, 0x40E718, 0x40E837, 0x40F0AF } : new uint[0];
+    }
+
+    // Comparaisons a une adresse dans un tableau dont le pas est mal devine : a deplacer comme une adresse du tableau.
+    // 0x4DE24E cmp eax, compagnies[20]+0xA4 (dans la boucle de 0x4DE279) : cases du joueur / des autres.
+    static uint[] ForcedMaps(bool walkers, bool buildings, bool companies)
+    {
+        return companies ? new uint[] { 0x4DE24E } : new uint[0];
     }
 
     static void PatchShl(byte[] f, Code c, uint va, byte from, byte to)
@@ -93,7 +104,7 @@ public static class Limits
         f[o] = to;
     }
 
-    static List<Konst> Constants(bool walkers, bool buildings)
+    static List<Konst> Constants(bool walkers, bool buildings, bool companies)
     {
         var l = new List<Konst>();
         if (walkers)
@@ -129,12 +140,14 @@ public static class Limits
                 l.Add(new Konst(va, 108000, 216000));
             l.Add(new Konst(0x493E51, 280000, 560000));     // rep stosd : remise a zero des batiments
         }
+        if (companies)
+            l.Add(new Konst(0x4DE961, 3900, 7800));         // rep stosd : remise a zero des compagnies
         return l;
     }
 
     // Tableaux locaux sur la pile, par fonction : (rel du debut, taille d'origine en octets, debut - 4 utilise)
     public class StackArr { public int Rel, Old, New; public bool OneBased; }
-    static Dictionary<uint, StackArr[]> StackArrays(bool walkers, bool buildings)
+    static Dictionary<uint, StackArr[]> StackArrays(bool walkers, bool buildings, bool companies)
     {
         var d = new Dictionary<uint, StackArr[]>();
         if (buildings)
@@ -203,11 +216,12 @@ public static class Limits
 
     // Table de sauvegarde (.data 0x63C2D0, 139 entrees de 20 octets) : entree -> tableau deplace
     static readonly uint SaveTable = 0x63C2D0;
-    static Dictionary<int, string> SaveEntries(bool walkers, bool buildings)
+    static Dictionary<int, string> SaveEntries(bool walkers, bool buildings, bool companies)
     {
         var d = new Dictionary<int, string>();
         if (walkers) { d[28] = "walkers"; d[29] = "proprietaires des chemins"; d[30] = "chemins"; }
         if (buildings) { d[35] = "batiments"; d[73] = "liste de batiments (e73)"; }
+        if (companies) d[31] = "compagnies (e31)";
         return d;
     }
 
@@ -254,7 +268,10 @@ public static class Limits
     static uint Align(uint v, uint a) { return (v + a - 1) / a * a; }
 
     // ---- patch
-    public static byte[] Patch(byte[] orig, bool walkers, bool buildings, StringBuilder log)
+    // Version 1.0 : walkers et/ou batiments (compagnies non doublees).
+    public static byte[] Patch(byte[] orig, bool walkers, bool buildings, StringBuilder log) { return Patch(orig, walkers, buildings, false, log); }
+
+    public static byte[] Patch(byte[] orig, bool walkers, bool buildings, bool companies, StringBuilder log)
     {
         byte[] f = (byte[])orig.Clone();
         Code c = Code.Load(f);
@@ -262,7 +279,8 @@ public static class Limits
         if (PatchedWpat(c) != null) throw new Exception("cet exe est deja patche (section " + WpatName + " agrandie)");
         CheckSignature(c);
 
-        var arrs = Arrays(walkers, buildings);
+        var arrs = Arrays(walkers, buildings, companies);
+        if (arrs.Count == 0) throw new Exception("rien a patcher");
         // nouvelle section apres la derniere
         int pe = c.Pe; uint secAlign = BitConverter.ToUInt32(f, pe + 24 + 32), fileAlign = BitConverter.ToUInt32(f, pe + 24 + 36);
         Sec last = c.Secs[c.Secs.Count - 1];
@@ -315,6 +333,7 @@ public static class Limits
 
         // references du code
         var keys = new List<uint>(c.Insns.Keys);
+        var forced = new HashSet<uint>(ForcedMaps(walkers, buildings, companies));
         int moved = 0, endLoops = 0, skipped = 0;
         var count = new Dictionary<string, int>();
         for (int k = 0; k < keys.Count; k++)
@@ -335,10 +354,12 @@ public static class Limits
                 {
                     if (v >= m.Base && v < m.End)
                     {
+                        if (forced.Remove(n.Va)) { nv = m.Map(v); why = m.Name + " (adresse comparee)"; break; }
                         if (cmp && !m.StrideOk(stride))
                         {
-                            // fin de boucle (pointeur de champ) d'un tableau deplace qui precede ?
-                            Moved pm = arrs.Find(x => x.Group == m.Group && x.End <= v && v <= x.End + (uint)x.Size && x.StrideOk(stride) && !x.Fixed);
+                            // fin de boucle (pointeur de champ) d'un tableau deplace qui precede, eventuellement d'un autre
+                            // groupe (les compagnies finissent 28 octets avant la file des walkers libres) ?
+                            Moved pm = arrs.Find(x => x.End <= v && v <= x.End + (uint)x.Size && x.StrideOk(stride) && !x.Fixed);
                             if (pm != null) { nv = v - pm.End + pm.NewEnd; why = pm.Name + " (fin de boucle)"; endLoops++; break; }
                             why = "fin de boucle d'un autre tableau (pas " + stride + ")"; break;
                         }
@@ -363,11 +384,12 @@ public static class Limits
                 count[why] = count.ContainsKey(why) ? count[why] + 1 : 1;
             }
         }
+        if (forced.Count > 0) throw new Exception(string.Format("comparaison attendue introuvable en 0x{0:X}", new List<uint>(forced)[0]));
         log.AppendFormat("references deplacees : {0} (dont fins de boucle {1}), laissees : {2}\n", moved, endLoops, skipped);
         foreach (var kv in count) log.AppendFormat("  {0} : {1}\n", kv.Key, kv.Value);
 
         // constantes
-        foreach (Konst kc in Constants(walkers, buildings))
+        foreach (Konst kc in Constants(walkers, buildings, companies))
         {
             Insn n; if (!c.Insns.TryGetValue(kc.Va, out n)) throw new Exception(string.Format("instruction attendue introuvable en 0x{0:X}", kc.Va));
             bool done = false;
@@ -381,13 +403,13 @@ public static class Limits
             if (!done) throw new Exception(string.Format("constante {0} attendue en 0x{1:X} : {2}", kc.Old, kc.Va, c.Text_(kc.Va)));
         }
 
-        foreach (uint va in ShlSites(walkers, buildings)) PatchShl(f, c, va, 5, 6);
+        foreach (uint va in ShlSites(walkers, buildings, companies)) PatchShl(f, c, va, 5, 6);
 
         // tableaux sur la pile
-        if (!NoStack) foreach (var kv in StackArrays(walkers, buildings)) PatchStack(f, c, kv.Key, kv.Value, false, log);
+        if (!NoStack) foreach (var kv in StackArrays(walkers, buildings, companies)) PatchStack(f, c, kv.Key, kv.Value, false, log);
 
         // table de sauvegarde : adresse et nombre
-        foreach (var kv in SaveEntries(walkers, buildings))
+        foreach (var kv in SaveEntries(walkers, buildings, companies))
         {
             Moved m = arrs.Find(x => x.Name == kv.Value);
             int e = c.ToOff(SaveTable + (uint)kv.Key * 20);
@@ -448,11 +470,12 @@ public static class Limits
             Sec w = PatchedWpat(c); if (w == null) return null;
             wpat = true; newVa = w.Va + w.RSize - CodePage; hdr = w.Header; vsize = w.VSize - (newVa - w.Va);
         }
-        for (int w = 0; w < 2; w++) for (int b = 0; b < 2; b++)
+        // { walkers, batiments, compagnies } ; sans compagnies = version 1.0
+        for (int k = 0; k < 2; k++) for (int w = 0; w < 2; w++) for (int b = 0; b < 2; b++)
         {
-            var arrs = Arrays(w == 1, b == 1); if (arrs.Count == 0) continue;
+            var arrs = Arrays(w == 1, b == 1, k == 1); if (arrs.Count == 0) continue;
             Layout(arrs, newVa, wpat || HasCode(arrs));
-            if (SectionSize(arrs, newVa) == vsize) return new bool[] { w == 1, b == 1 };
+            if (SectionSize(arrs, newVa) == vsize) return new bool[] { w == 1, b == 1, k == 1 };
         }
         throw new Exception("section " + (wpat ? WpatName : SectionName) + " de taille inattendue");
     }
@@ -476,9 +499,9 @@ public static class Limits
         if (g == null) throw new Exception("cet exe n'est pas patche");
         f = RemovePage(f, g, newVa, hdr, wpat, log);
         Code c = Code.Load(f);
-        var arrs = Arrays(g[0], g[1]); Layout(arrs, newVa, wpat || HasCode(arrs));
-        foreach (var kv in StackArrays(g[0], g[1])) PatchStack(f, c, kv.Key, kv.Value, true, log);
-        foreach (uint va in ShlSites(g[0], g[1])) PatchShl(f, c, va, 6, 5);
+        var arrs = Arrays(g[0], g[1], g[2]); Layout(arrs, newVa, wpat || HasCode(arrs));
+        foreach (var kv in StackArrays(g[0], g[1], g[2])) PatchStack(f, c, kv.Key, kv.Value, true, log);
+        foreach (uint va in ShlSites(g[0], g[1], g[2])) PatchShl(f, c, va, 6, 5);
         int restored = 0;
         foreach (Insn n in c.Insns.Values)
         {
@@ -497,7 +520,7 @@ public static class Limits
                 if (ov != v) { Put(f, o + fl.Off, ov); restored++; }
             }
         }
-        foreach (Konst kc in Constants(g[0], g[1]))
+        foreach (Konst kc in Constants(g[0], g[1], g[2]))
         {
             Insn n = c.Insns[kc.Va]; bool done = false;
             foreach (Field fl in n.Fields)
@@ -509,7 +532,7 @@ public static class Limits
                 }
             if (!done) throw new Exception(string.Format("constante {0} attendue en 0x{1:X}", kc.New, kc.Va));
         }
-        foreach (var kv in SaveEntries(g[0], g[1]))
+        foreach (var kv in SaveEntries(g[0], g[1], g[2]))
         {
             Moved m = arrs.Find(x => x.Name == kv.Value);
             int e = c.ToOff(SaveTable + (uint)kv.Key * 20);
@@ -655,7 +678,7 @@ public static class Limits
     {
         if (!wpat && !g[0]) return f;
         Code c = Code.Load(f);
-        var arrs = Arrays(g[0], g[1]); Layout(arrs, newVa, wpat || HasCode(arrs));
+        var arrs = Arrays(g[0], g[1], g[2]); Layout(arrs, newVa, wpat || HasCode(arrs));
         string sec = wpat ? WpatName : SectionName;
         uint raw = BitConverter.ToUInt32(f, hdr + 20), rsize = BitConverter.ToUInt32(f, hdr + 16);
         if (rsize < CodePage || (!wpat && rsize != CodePage) || raw + rsize != f.Length) throw new Exception("page de code de " + sec + " inattendue");

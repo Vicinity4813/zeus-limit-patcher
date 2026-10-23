@@ -1,15 +1,16 @@
-﻿ZEUS LIMIT PATCHER 1.0 - Zeus: Master of Olympus / Poseidon
+﻿ZEUS LIMIT PATCHER 1.1 -Zeus: Master of Olympus / Poseidon
 ==========================================================
 (Version française : LISEZMOI.txt)
 
 What it does
 ------------
 Big cities hit fixed limits in the game: walkers stop appearing, workers cannot find
-a path, no more buildings can be placed. This program doubles these limits in your
-English Zeus.exe 2.1.4.0:
+a path, no more buildings can be placed, big invasions stay small. This program
+doubles these limits in your English Zeus.exe 2.1.4.0:
   - walkers (people and animals moving in the city): 2000 -> 4000
   - paths (routes computed for the walkers)         : 1000 -> 2000
   - buildings                                       : 4000 -> 8000
+  - army companies (soldiers, invaders)             :  100 ->  200
 Nothing else changes (graphics, map size, gameplay).
 
 How to use it
@@ -29,6 +30,14 @@ Saved games
 - Existing saved games open normally with the patched exe.
 - Saved games made with the patched exe CAN NO LONGER be opened by the original exe
   (the game crashes). Keep a copy of your saves before you patch if you might go back.
+- Saved games made with a 1.1 exe cannot be opened by a 1.0 exe either. Saved games
+  made with a 1.0 exe open with a 1.1 exe.
+
+Upgrading from 1.0
+------------------
+Version 1.0 did not double the army companies. The window recognises a 1.0 exe: put
+the original exe from the "Zeus.exe original" folder back in place of Zeus.exe, then
+patch it again with 1.1.
 
 Supported exes
 --------------

@@ -129,15 +129,25 @@ public static class SavLimits
     // Entree du manifeste, taille d'element, nombre normal ; adresses des tableaux dans l'exe anglais 2.1.4.0
     // d'origine et dans l'exe patche (relevees dans une sauvegarde de l'exe patche). Une autre adresse (exe
     // francais...) est laissee telle quelle : au chargement, le jeu ne compare que la taille et le nombre.
-    struct Ent { public int Index, Size, Count; public uint OldAddr, NewAddr; public string Name; }
+    // Optional : entree doublee seulement depuis la version 1.1 (compagnies) ; une .sav de l'exe 1.0 la garde a
+    // son nombre normal et reste « agrandie ». Agrandir / reduire la traite comme les autres.
+    struct Ent { public int Index, Size, Count; public uint OldAddr, NewAddr; public string Name; public bool Optional; }
     static readonly Ent[] Ents = {
         new Ent { Index = 28, Size = 388, Count = 2000,   OldAddr = 0xDBD788, NewAddr = 0x1615E8C, Name = "walkers" },
         new Ent { Index = 29, Size = 2,   Count = 1000,   OldAddr = 0xEF4FE8, NewAddr = 0x1884F4C, Name = "proprietaires des chemins" },
         new Ent { Index = 30, Size = 1,   Count = 500000, OldAddr = 0xE7AEC8, NewAddr = 0x1790D0C, Name = "chemins" },
         new Ent { Index = 35, Size = 280, Count = 4000,   OldAddr = 0x92E658, NewAddr = 0x1886010, Name = "batiments" },
         new Ent { Index = 73, Size = 2,   Count = 4000,   OldAddr = 0x91F5B8, NewAddr = 0x1C67010, Name = "liste des batiments" },
+        new Ent { Index = 31, Size = 156, Count = 100,    OldAddr = 0xDB7B40, NewAddr = 0x1C6B010, Name = "compagnies", Optional = true },
     };
     const int WalkerAlive = 14, WalkerPath = 58, BuildingAlive = 0;
+
+    // Compagnie occupee : un octet non nul dans ses 156 octets (les cases libres sont entierement a zero).
+    public static bool CompanyUsed(Block c, int i)
+    {
+        for (int k = 0; k < 156; k++) if (c.Data[i * 156 + k] != 0) return true;
+        return false;
+    }
     const uint PrevShift = 0x1000;   // patch du 2026-10-19 (sans page de code en tete de .zlim) : adresses 4 Ko plus bas
 
     public enum State { Normal, Agrandi, Mixte }
@@ -150,6 +160,8 @@ public static class SavLimits
             {
                 Block b = p.Get(e.Index);
                 if (b == null || b.ElemSize != e.Size) throw new InvalidDataException("entree " + e.Index + " inattendue (pas une sauvegarde de Zeus 2.1.4.0 ?)");
+                if (b.Count != e.Count && b.Count != e.Count * 2) throw new InvalidDataException("entree " + e.Index + " : nombre " + b.Count + " inconnu");
+                if (e.Optional) continue;
                 if (b.Count == e.Count) old++;
                 else if (b.Count == e.Count * 2) big++;
                 else throw new InvalidDataException("entree " + e.Index + " : nombre " + b.Count + " inconnu");
@@ -192,8 +204,8 @@ public static class SavLimits
     // batiments n° >= 4000, cases occupees de la liste e73 au-dela de 4000 (tout a zero = reduction possible).
     public static int[] Blockers(SavPart p)
     {
-        Block w = p.Get(28), owners = p.Get(29), bat = p.Get(35), list = p.Get(73);
-        int hiW = 0, hiPath = 0, hiOwner = 0, hiB = 0, hiList = 0;
+        Block w = p.Get(28), owners = p.Get(29), bat = p.Get(35), list = p.Get(73), comp = p.Get(31);
+        int hiW = 0, hiPath = 0, hiOwner = 0, hiB = 0, hiList = 0, hiC = 0;
         for (int i = 0; i < w.Count; i++)
         {
             if (w.Data[i * 388 + WalkerAlive] == 0) continue;
@@ -203,7 +215,8 @@ public static class SavLimits
         for (int i = 1000; i < owners.Count; i++) if (BitConverter.ToInt16(owners.Data, i * 2) != 0) hiOwner++;
         for (int i = 4000; i < bat.Count; i++) if (bat.Data[i * 280 + BuildingAlive] != 0) hiB++;
         for (int i = 4000; i < list.Count; i++) if (BitConverter.ToInt16(list.Data, i * 2) != 0) hiList++;
-        return new[] { hiW, hiPath + hiOwner, hiB, hiList };
+        for (int i = 100; i < comp.Count; i++) if (CompanyUsed(comp, i)) hiC++;
+        return new[] { hiW, hiPath + hiOwner, hiB, hiList, hiC };
     }
 
     static void CheckReducible(SavPart p, int pi, int n)
@@ -214,6 +227,7 @@ public static class SavLimits
         if (k[1] > 0) why.Add(k[1] + " chemins utilises au-dela du n° 999");
         if (k[2] > 0) why.Add(k[2] + " batiments au-dela du n° 3999");
         if (k[3] > 0) why.Add(k[3] + " cases occupees dans la liste des batiments au-dela de 4000");
+        if (k[4] > 0) why.Add(k[4] + " compagnies au-dela du n° 99");
         if (why.Count > 0) throw new InvalidDataException(PartName(pi, n) + " : impossible de revenir aux limites normales sans perte (" + string.Join(", ", why) + ")");
     }
 
@@ -230,6 +244,8 @@ public static class SavLimits
     public static string Describe(SavPart p, int pi, int n)
     {
         int[] a = Alive(p);
-        return string.Format("{0} : {1} walkers / {2}, {3} batiments / {4}, chemins / {5}", PartName(pi, n), a[0], p.Get(28).Count, a[1], p.Get(35).Count, p.Get(29).Count);
+        Block c = p.Get(31); int nc = 0;
+        for (int i = 0; i < c.Count; i++) if (CompanyUsed(c, i)) nc++;
+        return string.Format("{0} : {1} walkers / {2}, {3} batiments / {4}, chemins / {5}, {6} compagnies / {7}", PartName(pi, n), a[0], p.Get(28).Count, a[1], p.Get(35).Count, p.Get(29).Count, nc, c.Count);
     }
 }

@@ -1,6 +1,7 @@
 // Essai du convertisseur de sauvegardes :
 //   SavCli.exe info <fichier.sav | dossier> ...      parties, entrees des limites, relecture aller-retour
 //   SavCli.exe diff <a.sav> <b.sav>                  entrees du manifeste qui different (1re partie)
+//   SavCli.exe agrandir|reduire <a.sav> [b.sav]      conversion (agrandir = format 1.1 : compagnies 200 comprises)
 using System;
 using System.IO;
 using ZeusPak;
@@ -96,7 +97,7 @@ public static class SavCli
         return 0;
     }
 
-    static readonly int[] Limited = { 28, 29, 30, 35, 73 };
+    static readonly int[] Limited = { 28, 29, 30, 31, 35, 73 };
 
     // Meme contenu : memes parties, memes manifestes, memes donnees ; blocs hors limites identiques a l'octet.
     static string Compare(byte[] fa, byte[] fb)

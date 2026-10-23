@@ -1,5 +1,5 @@
 // Essai du patch en ligne de commande :
-//   PatchCli.exe <entree.exe> <sortie.exe> [walkers] [batiments]
+//   PatchCli.exe <entree.exe> <sortie.exe> [walkers] [batiments] [compagnies]
 //   PatchCli.exe annuler <entree.exe> <sortie.exe>
 using System;
 using System.IO;
@@ -15,9 +15,9 @@ public static class PatchCli
             if (a[0] == "annuler") File.WriteAllBytes(a[2], Limits.Unpatch(File.ReadAllBytes(a[1]), log));
             else
             {
-                bool w = Array.IndexOf(a, "walkers") >= 0, b = Array.IndexOf(a, "batiments") >= 0;
+                bool w = Array.IndexOf(a, "walkers") >= 0, b = Array.IndexOf(a, "batiments") >= 0, k = Array.IndexOf(a, "compagnies") >= 0;
                 Limits.NoStack = Array.IndexOf(a, "sanspile") >= 0;
-                File.WriteAllBytes(a[1], Limits.Patch(File.ReadAllBytes(a[0]), w, b, log));
+                File.WriteAllBytes(a[1], Limits.Patch(File.ReadAllBytes(a[0]), w, b, k, log));
             }
             Console.Write(log.ToString());
             return 0;

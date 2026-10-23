@@ -1,5 +1,5 @@
 // Zeus Limit Patcher : double les limites de donnees d'un Zeus.exe anglais 2.1.4.0 (walkers 2000 -> 4000,
-// chemins 1000 -> 2000, batiments 4000 -> 8000). L'exe d'origine est copie dans le dossier "Zeus.exe original"
+// chemins 1000 -> 2000, batiments 4000 -> 8000, compagnies 100 -> 200 depuis la 1.1). L'exe d'origine est copie dans le dossier "Zeus.exe original"
 // a cote du patcheur (pas de .bak a cote du jeu, qui pourrait entrer en conflit avec d'autres outils).
 // Les anciennes sauvegardes s'ouvrent avec l'exe patche ; celles qu'il ecrit ne s'ouvrent plus avec l'exe d'origine.
 // Interface en francais si Windows est en francais, en anglais sinon (--lang fr|en pour forcer).
@@ -14,15 +14,15 @@ using System.Threading;
 using System.Windows.Forms;
 
 [assembly: System.Reflection.AssemblyTitle("Zeus Limit Patcher")]
-[assembly: System.Reflection.AssemblyDescription("Doubles the data limits of Zeus.exe 2.1.4.0 (walkers, paths, buildings)")]
+[assembly: System.Reflection.AssemblyDescription("Doubles the data limits of Zeus.exe 2.1.4.0 (walkers, paths, buildings, companies)")]
 [assembly: System.Reflection.AssemblyCompany("Outils Zeus (projet amateur)")]
 [assembly: System.Reflection.AssemblyProduct("Zeus Limit Patcher")]
 [assembly: System.Reflection.AssemblyCopyright("© 2026 Vicinity4813 - MIT License")]
 [assembly: System.Resources.NeutralResourcesLanguage("en")]
 [assembly: System.Runtime.InteropServices.ComVisible(false)]
-[assembly: System.Reflection.AssemblyVersion("1.0.0.0")]
-[assembly: System.Reflection.AssemblyFileVersion("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersion("1.0")]
+[assembly: System.Reflection.AssemblyVersion("1.1.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("1.1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersion("1.1")]
 
 // Langue de l'interface. Le choix est memorise dans %LOCALAPPDATA%\Zeus Limit Patcher\langue.txt ;
 // par defaut, la langue de Windows (francais si Windows est en francais, anglais sinon).
@@ -100,12 +100,13 @@ static class Ops
             bool[] g = Limits.Detect(f, out va, out hdr);
             if (g != null)
             {
-                text = g[0] && g[1] ? L.T("Limites déjà doublées (walkers, chemins, bâtiments)", "Limits already doubled (walkers, paths, buildings)")
+                text = g[0] && g[1] && g[2] ? L.T("Limites déjà doublées (walkers, chemins, bâtiments, compagnies)", "Limits already doubled (walkers, paths, buildings, companies)")
+                     : g[0] && g[1] ? L.T("Patché en 1.0 (compagnies non doublées) : remettre l'exe d'origine puis patcher à nouveau", "Patched with 1.0 (companies not doubled): put the original exe back, then patch again")
                                     : L.T("Limites déjà en partie doublées (essai)", "Limits partly doubled (test build)");
                 if (IsQol(f)) text += L.T(" — exe zeus-qol", " — zeus-qol exe");
                 return ExeState.Patched;
             }
-            Limits.Patch(f, true, true, new StringBuilder());   // en memoire : l'exe est-il patchable ?
+            Limits.Patch(f, true, true, true, new StringBuilder());   // en memoire : l'exe est-il patchable ?
             text = IsQol(f) ? L.T("Exe zeus-qol (anglais 2.1.4.0) — limites normales", "zeus-qol exe (English 2.1.4.0) — normal limits")
                             : L.T("Exe anglais 2.1.4.0 — limites normales", "English exe 2.1.4.0 — normal limits");
             return ExeState.Normal;
@@ -142,7 +143,7 @@ static class Ops
     public static bool PatchExe(string path)
     {
         byte[] orig = File.ReadAllBytes(path);
-        byte[] f = Limits.Patch(orig, true, true, new StringBuilder());
+        byte[] f = Limits.Patch(orig, true, true, true, new StringBuilder());
         // controle : l'annulation du nouvel exe doit redonner l'original octet pour octet
         if (!Same(Limits.Unpatch(f, new StringBuilder()), orig))
         {
@@ -152,7 +153,7 @@ static class Ops
         }
         string bak = Backup(path, orig);
         File.WriteAllBytes(path, f);
-        Log(L.T("Limites doublées : walkers 4000, chemins 2000, bâtiments 8000.", "Limits doubled: walkers 4000, paths 2000, buildings 8000."), Kind.Ok);
+        Log(L.T("Limites doublées : walkers 4000, chemins 2000, bâtiments 8000, compagnies 200.", "Limits doubled: walkers 4000, paths 2000, buildings 8000, companies 200."), Kind.Ok);
         Log(L.T("Exe d'origine gardé ici : ", "Original exe kept here: ") + bak, Kind.Info);
         Log(L.T("Pour revenir en arrière : remettre cette copie à la place de Zeus.exe.", "To go back: put this copy back in place of Zeus.exe."), Kind.Info);
         Log(SaveWarning, Kind.Warn);
@@ -254,8 +255,8 @@ class MainForm : Form
     {
         Text = title.Text = "Zeus Limit Patcher";
         lLang.Text = L.T("Langue :", "Language:");
-        intro.Text = L.T("Double les limites de données d'un Zeus.exe anglais 2.1.4.0 (GOG, Steam, widescreen, avec ou sans French Patch) : walkers 2000 → 4000, chemins 1000 → 2000, bâtiments 4000 → 8000.",
-                         "Doubles the data limits of an English Zeus.exe 2.1.4.0 (GOG, Steam, widescreen, with or without the French Patch): walkers 2000 → 4000, paths 1000 → 2000, buildings 4000 → 8000.");
+        intro.Text = L.T("Double les limites de données d'un Zeus.exe anglais 2.1.4.0 (GOG, Steam, widescreen, avec ou sans French Patch) : walkers 2000 → 4000, chemins 1000 → 2000, bâtiments 4000 → 8000, compagnies 100 → 200.",
+                         "Doubles the data limits of an English Zeus.exe 2.1.4.0 (GOG, Steam, widescreen, with or without the French Patch): walkers 2000 → 4000, paths 1000 → 2000, buildings 4000 → 8000, companies 100 → 200.");
         lExe.Text = L.T("Zeus.exe à patcher :", "Zeus.exe to patch:");
         bExe.Text = L.T("Parcourir…", "Browse…");
         lWarn.Text = Ops.SaveWarning + " " + L.T("L'exe d'origine est copié dans : ", "The original exe is copied to: ") + Ops.BackupDir;
