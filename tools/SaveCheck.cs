@@ -4,7 +4,7 @@
 // En service : walker = octet 14 non nul (entree 28) ; batiment = octet 0 non nul (entree 35) ; chemin =
 // proprietaire non nul (entree 29, n° du walker qui suit le chemin ; recoupe avec le champ +58 des walkers).
 // Interface en francais si Windows est en francais, en anglais sinon (--lang fr|en pour forcer).
-// En ligne de commande : "Zeus Save Check.exe" <fichier.sav | dossier> ...
+// En ligne de commande : "Zeus Save Check.exe" <fichier.sav | dossier> ... (fichiers lâchés sur l'icône : la fenêtre)
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -132,10 +132,13 @@ static class Program
         L.Load();
         int li = Array.IndexOf(args, "--lang");
         if (li >= 0 && li + 1 < args.Length) { L.Fr = args[li + 1] == "fr"; var r = new List<string>(args); r.RemoveRange(li, 2); args = r.ToArray(); }
-        if (args.Length > 0) { AttachConsole(-1); return Cli(args); }
+        // sans console (fichiers lâchés sur l'icône de l'exe) : la fenêtre, avec ces fichiers
+        if (args.Length > 0 && AttachConsole(-1)) return Cli(args);
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
-        Application.Run(new MainForm());
+        MainForm f = new MainForm();
+        if (args.Length > 0) f.Shown += delegate { f.Add(args); };
+        Application.Run(f);
         return 0;
     }
 
@@ -230,7 +233,7 @@ class MainForm : Form
 
     // Lecture en arriere-plan (decompression : environ un dixieme de seconde par fichier) ; une sauvegarde
     // deja dans la liste est relue et remplacee.
-    void Add(string[] paths)
+    public void Add(string[] paths)
     {
         reading++; UseWaitCursor = true;
         Thread t = new Thread(() =>

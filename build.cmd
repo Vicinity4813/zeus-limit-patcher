@@ -17,7 +17,7 @@ if errorlevel 1 exit /b 1
     "/out:dist\Zeus Limit Patcher.exe" /r:System.Drawing.dll /r:System.Windows.Forms.dll ^
     src\X86.cs src\Dis.cs src\Code.cs src\Stack.cs src\Limits.cs tools\LimitPatcher.cs
 if errorlevel 1 exit /b 1
-"%CSC%" /nologo /target:winexe /optimize+ /codepage:65001 /win32manifest:src\app.manifest ^
+"%CSC%" /nologo /target:winexe /platform:x86 /optimize+ /codepage:65001 /win32manifest:src\app.manifest ^
     "/out:dist\Zeus Save Check.exe" /r:System.Drawing.dll /r:System.Windows.Forms.dll ^
     src\ZeusPak.cs src\SavLimits.cs tools\SaveCheck.cs
 if errorlevel 1 exit /b 1
