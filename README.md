@@ -18,7 +18,7 @@ Nothing else changes: graphics, map size, gameplay and the number of cities on t
 
 ## Download
 
-Get `Zeus-Limit-Patcher-1.1.zip` from the **[Releases](../../releases)** page: the patcher, instructions in English and French, and the source code.
+Get `Zeus-Limit-Patcher-1.1.zip` from the **[Releases](../../releases)** page: the patcher, Zeus Save Check, instructions in English and French, and the source code.
 
 > Windows may show *"Windows protected your PC"* the first time, because the program is new and unsigned: click **More info**, then **Run anyway**.
 
@@ -37,6 +37,7 @@ Command line: `"Zeus Limit Patcher.exe" [--lang fr|en] --info <Zeus.exe> | --pat
 - Existing saved games open normally with the patched exe.
 - **Saved games made with the patched exe can no longer be opened by the original exe (the game crashes).** Keep a copy of your saves before you patch if you might go back.
 - Saved games made with a 1.1 exe cannot be opened by a 1.0 exe either. Saved games made with a 1.0 exe open with a 1.1 exe.
+- **Zeus Save Check** (`Zeus Save Check.exe`, in the zip): drop .sav files on it to see which exe wrote them (normal, patched 1.0 or 1.1) and how many walkers, buildings, paths and companies are in use out of the limit.
 
 ## Upgrading from 1.0
 
@@ -60,12 +61,12 @@ Version 1.0 did not double the army companies. The window recognises a 1.0 exe (
 
 ## Building
 
-Run `build.cmd`: it uses the C# compiler that ships with Windows (.NET Framework 4) and produces `dist\Zeus Limit Patcher.exe` and the development tools (`PatchCli`, `Refs`, `SavCli`, `LowestTest`, `Garde`). `tools\make_release.ps1` builds the release zip.
+Run `build.cmd`: it uses the C# compiler that ships with Windows (.NET Framework 4) and produces `dist\Zeus Limit Patcher.exe`, `dist\Zeus Save Check.exe` and the development tools (`PatchCli`, `Refs`, `SavCli`, `LowestTest`, `Garde`). `tools\make_release.ps1` builds the release zip.
 
 ## Credits and license
 
 - Code: MIT License, see [LICENSE](LICENSE).
-- `src/ZeusPak.cs` (used by the saved game tool `SavCli`, not by the patcher) is adapted from **zeus_mapper** by zawapl (Jakub Zawadzki), MIT License, see [LICENSE-zeus_mapper.txt](LICENSE-zeus_mapper.txt).
+- `src/ZeusPak.cs` (used by Zeus Save Check and the saved game tool `SavCli`, not by the patcher) is adapted from **zeus_mapper** by zawapl (Jakub Zawadzki), MIT License, see [LICENSE-zeus_mapper.txt](LICENSE-zeus_mapper.txt).
 - Thanks to **JackFuste** for the widescreen exes the patch was developed and tested on.
 - Compatibility with **zeus-qol** by andrehamon was tested on its published release; no code from it is used.
 - *Zeus: Master of Olympus* / *Poseidon* are games by Impressions Games / Sierra. This is a fan project, not affiliated with them; it includes no game file (only the screenshot of the patcher's window in `docs/images`).
@@ -89,7 +90,7 @@ Rien d'autre ne change : graphismes, taille de la carte, règles du jeu et nombr
 
 ### Téléchargement
 
-`Zeus-Limit-Patcher-1.1.zip` sur la page **[Releases](../../releases)** : le patcheur, les notices en français et en anglais, et le code source.
+`Zeus-Limit-Patcher-1.1.zip` sur la page **[Releases](../../releases)** : le patcheur, Zeus Save Check, les notices en français et en anglais, et le code source.
 
 > Au premier lancement, Windows peut afficher *« Windows a protégé votre ordinateur »*, car le programme est récent et non signé : cliquez sur **Informations complémentaires**, puis **Exécuter quand même**.
 
@@ -108,6 +109,7 @@ Ligne de commande : `"Zeus Limit Patcher.exe" [--lang fr|en] --info <Zeus.exe> |
 - Les sauvegardes existantes s'ouvrent normalement avec l'exe patché.
 - **Les sauvegardes faites avec l'exe patché ne peuvent plus être ouvertes par l'exe d'origine (le jeu plante).** Gardez une copie de vos sauvegardes avant de patcher si vous pensez revenir en arrière.
 - Les sauvegardes faites avec un exe 1.1 ne s'ouvrent pas non plus avec un exe 1.0. Celles faites avec un exe 1.0 s'ouvrent avec un exe 1.1.
+- **Zeus Save Check** (`Zeus Save Check.exe`, dans le zip) : glissez-y des .sav pour voir quel exe les a écrites (normal, patché 1.0 ou 1.1) et combien de walkers, bâtiments, chemins et compagnies sont en service sur la limite.
 
 ### Passer de la 1.0 à la 1.1
 
@@ -131,12 +133,12 @@ La 1.0 ne doublait pas les compagnies d'armée. La fenêtre reconnaît un exe 1.
 
 ### Compilation
 
-Lancez `build.cmd` : il utilise le compilateur C# fourni avec Windows (.NET Framework 4) et produit `dist\Zeus Limit Patcher.exe` et les outils de développement (`PatchCli`, `Refs`, `SavCli`, `LowestTest`, `Garde`). `tools\make_release.ps1` prépare le zip de la release.
+Lancez `build.cmd` : il utilise le compilateur C# fourni avec Windows (.NET Framework 4) et produit `dist\Zeus Limit Patcher.exe`, `dist\Zeus Save Check.exe` et les outils de développement (`PatchCli`, `Refs`, `SavCli`, `LowestTest`, `Garde`). `tools\make_release.ps1` prépare le zip de la release.
 
 ### Crédits et licence
 
 - Code : licence MIT, voir [LICENSE](LICENSE).
-- `src/ZeusPak.cs` (utilisé par l'outil de sauvegardes `SavCli`, pas par le patcheur) est adapté de **zeus_mapper** de zawapl (Jakub Zawadzki), licence MIT, voir [LICENSE-zeus_mapper.txt](LICENSE-zeus_mapper.txt).
+- `src/ZeusPak.cs` (utilisé par Zeus Save Check et l'outil de sauvegardes `SavCli`, pas par le patcheur) est adapté de **zeus_mapper** de zawapl (Jakub Zawadzki), licence MIT, voir [LICENSE-zeus_mapper.txt](LICENSE-zeus_mapper.txt).
 - Merci à **JackFuste** pour les exe widescreen sur lesquels le patch a été mis au point et testé.
 - La compatibilité avec **zeus-qol** d'andrehamon a été testée sur sa version publiée ; aucun code n'en est repris.
 - *Le Maître de l'Olympe : Zeus* / *Poséidon* sont des jeux d'Impressions Games / Sierra. Projet de fan, sans lien avec eux ; aucun fichier du jeu n'est inclus (seulement la capture de la fenêtre du patcheur dans `docs/images`).

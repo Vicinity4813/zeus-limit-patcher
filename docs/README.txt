@@ -32,6 +32,9 @@ Saved games
   (the game crashes). Keep a copy of your saves before you patch if you might go back.
 - Saved games made with a 1.1 exe cannot be opened by a 1.0 exe either. Saved games
   made with a 1.0 exe open with a 1.1 exe.
+- "Zeus Save Check.exe": drop .sav files on it to see which exe wrote them (normal,
+  patched 1.0 or 1.1) and how many walkers, buildings, paths and companies are in
+  use out of the limit.
 
 Upgrading from 1.0
 ------------------
@@ -64,8 +67,9 @@ Good to know
 Credits
 -------
 - Code: MIT License (LICENSE file). Vicinity4813, 2026.
-- Reading saved games (source\ZeusPak.cs, SavCli tool) is adapted from zeus_mapper by
-  zawapl (Jakub Zawadzki), MIT License (source\LICENSE-zeus_mapper.txt).
+- Reading saved games (source\ZeusPak.cs, Zeus Save Check, SavCli tool) is adapted
+  from zeus_mapper by zawapl (Jakub Zawadzki), MIT License (LICENSE-zeus_mapper.txt
+  file).
 - Thanks to JackFuste for the widescreen exes the patch was developed on.
 - Compatibility tested with zeus-qol by andrehamon (published release); no code used.
 - Zeus: Master of Olympus / Poseidon are games by Impressions Games / Sierra.

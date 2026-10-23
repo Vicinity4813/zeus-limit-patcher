@@ -34,6 +34,9 @@ Sauvegardes
   vous pensez revenir en arrière.
 - Les sauvegardes faites avec un exe 1.1 ne s'ouvrent pas non plus avec un exe 1.0.
   Celles faites avec un exe 1.0 s'ouvrent avec un exe 1.1.
+- « Zeus Save Check.exe » : glissez-y des .sav pour voir quel exe les a écrites
+  (normal, patché 1.0 ou 1.1) et combien de walkers, bâtiments, chemins et
+  compagnies sont en service sur la limite.
 
 Passer de la 1.0 à la 1.1
 -------------------------
@@ -67,8 +70,9 @@ Bon à savoir
 Crédits
 -------
 - Code : licence MIT (fichier LICENSE). Vicinity4813, 2026.
-- La lecture des sauvegardes (source\ZeusPak.cs, outil SavCli) est adaptée de
-  zeus_mapper de zawapl (Jakub Zawadzki), licence MIT (source\LICENSE-zeus_mapper.txt).
+- La lecture des sauvegardes (source\ZeusPak.cs, Zeus Save Check, outil SavCli) est
+  adaptée de zeus_mapper de zawapl (Jakub Zawadzki), licence MIT
+  (fichier LICENSE-zeus_mapper.txt).
 - Merci à JackFuste pour les exe widescreen sur lesquels le patch a été mis au point.
 - Compatibilité testée avec zeus-qol d'andrehamon (version publiée) ; aucun code repris.
 - Le Maître de l'Olympe : Zeus / Poséidon sont des jeux d'Impressions Games / Sierra.
