@@ -74,6 +74,7 @@ Crédits
   adaptée de zeus_mapper de zawapl (Jakub Zawadzki), licence MIT
   (fichier LICENSE-zeus_mapper.txt).
 - Merci à JackFuste pour les exe widescreen sur lesquels le patch a été mis au point.
+- Merci à Loic2402 pour les tests en jeu des limites des walkers et des compagnies.
 - Compatibilité testée avec zeus-qol d'andrehamon (version publiée) ; aucun code repris.
 - Le Maître de l'Olympe : Zeus / Poséidon sont des jeux d'Impressions Games / Sierra.
   Projet de fan, sans lien avec eux ; aucun fichier du jeu n'est inclus.

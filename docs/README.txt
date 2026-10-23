@@ -71,6 +71,7 @@ Credits
   from zeus_mapper by zawapl (Jakub Zawadzki), MIT License (LICENSE-zeus_mapper.txt
   file).
 - Thanks to JackFuste for the widescreen exes the patch was developed on.
+- Thanks to Loic2402 for the in-game tests of the walker and company limits.
 - Compatibility tested with zeus-qol by andrehamon (published release); no code used.
 - Zeus: Master of Olympus / Poseidon are games by Impressions Games / Sierra.
   Fan project, not affiliated with them; no game file is included.

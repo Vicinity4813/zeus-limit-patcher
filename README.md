@@ -68,6 +68,7 @@ Run `build.cmd`: it uses the C# compiler that ships with Windows (.NET Framework
 - Code: MIT License, see [LICENSE](LICENSE).
 - `src/ZeusPak.cs` (used by Zeus Save Check and the saved game tool `SavCli`, not by the patcher) is adapted from **zeus_mapper** by zawapl (Jakub Zawadzki), MIT License, see [LICENSE-zeus_mapper.txt](LICENSE-zeus_mapper.txt).
 - Thanks to **JackFuste** for the widescreen exes the patch was developed and tested on.
+- Thanks to **Loic2402** for the in-game tests of the walker and company limits.
 - Compatibility with **zeus-qol** by andrehamon was tested on its published release; no code from it is used.
 - *Zeus: Master of Olympus* / *Poseidon* are games by Impressions Games / Sierra. This is a fan project, not affiliated with them; it includes no game file (only the screenshot of the patcher's window in `docs/images`).
 
@@ -140,5 +141,6 @@ Lancez `build.cmd` : il utilise le compilateur C# fourni avec Windows (.NET Fram
 - Code : licence MIT, voir [LICENSE](LICENSE).
 - `src/ZeusPak.cs` (utilisé par Zeus Save Check et l'outil de sauvegardes `SavCli`, pas par le patcheur) est adapté de **zeus_mapper** de zawapl (Jakub Zawadzki), licence MIT, voir [LICENSE-zeus_mapper.txt](LICENSE-zeus_mapper.txt).
 - Merci à **JackFuste** pour les exe widescreen sur lesquels le patch a été mis au point et testé.
+- Merci à **Loic2402** pour les tests en jeu des limites des walkers et des compagnies.
 - La compatibilité avec **zeus-qol** d'andrehamon a été testée sur sa version publiée ; aucun code n'en est repris.
 - *Le Maître de l'Olympe : Zeus* / *Poséidon* sont des jeux d'Impressions Games / Sierra. Projet de fan, sans lien avec eux ; aucun fichier du jeu n'est inclus (seulement la capture de la fenêtre du patcheur dans `docs/images`).
